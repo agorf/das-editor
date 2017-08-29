@@ -52,8 +52,25 @@ module Femto
       ANSI.move_cursor(cursor.row, cursor.col)
     end
 
+    # Reads keypresses from the user including 2 and 3 escape character sequences.
+    def read_char
+      STDIN.echo = false
+      STDIN.raw!
+
+      input = STDIN.getc.chr
+      if input == "\e" then
+        input << STDIN.read_nonblock(3) rescue nil
+        input << STDIN.read_nonblock(2) rescue nil
+      end
+    ensure
+      STDIN.echo = true
+      STDIN.cooked!
+
+      return input
+    end
+
     def handle_input
-      char = $stdin.getc
+      char = read_char
 
       case char
       when "\cq" then quit
@@ -71,6 +88,13 @@ module Femto
       when "\c_" then history_undo
       when "\cr" then history_redo
       when "\r"  then enter
+      when "\e[A" then up
+      when "\e[B" then down
+      when "\e[C" then right
+      when "\e[D" then left
+      when "\e" then quit
+      when "\177" then backspace
+      when "\004" then delete
       else
         insert_char(char) if char =~ /[[:print:]]/
       end
